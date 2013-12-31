@@ -56,7 +56,16 @@ public class EnumerationPlugin implements Plugin
 {
 
 	public static final String DESCRIPTION_CONSTANT = "description";
+	/*
+	 * Description title will be used in user interfaces as field descriptors, form titles.
+	 */
+	public static final String TITLE_SUFFIX = "title";
+	/*
+	 * Text will be used as help messages, popup illustrations of fields and forms
+	 */
+	public static final String TEXT_SUFFIX = "text";
 	public static final String DOT_CONSTANT = ".";
+	public static final String UNDERSCORE_CONSTANT = "_";
 
 
 	@Inject
@@ -119,8 +128,9 @@ public class EnumerationPlugin implements Plugin
 
 	@Command(value = "add-enum-class-description", help = "Adds a @Description annotation to the current Enum class")
 	public void addEnumDescription( 
-			@Option(name = "value") String value, 
-			@Option(name = "locale") String locale,			
+			@Option(name = "title") String title, 
+			@Option(name = "text") String text, 
+            @Option(name = "locale") String locale,			
 			final PipeOut out) throws FileNotFoundException{
 		final Resource<?> currentResource = shell.getCurrentResource();
 
@@ -129,17 +139,17 @@ public class EnumerationPlugin implements Plugin
 			JavaSource<?> javaSource = jr.getJavaSource();
 			if(javaSource.isEnum()){
 				JavaEnum javaEnum = (JavaEnum) javaSource ;
-				String descriptionKey = getDescriptionKey(javaEnum);
-				updateResourceBundleFiles(javaEnum.getPackage(), locale, descriptionKey, value);
+				String key = getDescriptionKey(javaEnum);
+				updateResourceBundleFiles(javaEnum.getOrigin().getQualifiedName(), locale, key, title, text);
 				Annotation<JavaEnum> annotation = null;
 				if (!javaEnum.hasAnnotation(Description.class)) {
 					annotation = javaEnum.addAnnotation(Description.class);
-					annotation.setStringValue(descriptionKey);
+					annotation.setStringValue(key);
 					saveAndFire(javaEnum);
 				} else {
 					annotation = javaEnum.getAnnotation(Description.class);
-					if(!descriptionKey.equals(annotation.getStringValue())){
-						annotation.setStringValue(descriptionKey);
+					if(!key.equals(annotation.getStringValue())){
+						annotation.setStringValue(key);
 						saveAndFire(javaEnum);
 					}
 				}
@@ -151,11 +161,12 @@ public class EnumerationPlugin implements Plugin
 		}
 	}
 
-	@Command(value = "add-enum-constant-description", help = "Adds a description annotation to the enum constant of an Enum")
+	@Command(value = "add-enum-constant-description", help = "Adds a @Description annotation to the enum constant of an Enum")
 	public void addConstantDescription(
 			@Option(name = "onConstant", completer =EnumConstantCompleter.class, required = true) String constant,
-			@Option(name = "value") String value, 
-			@Option(name = "locale") String locale,
+			@Option(name = "title") String title, 
+			@Option(name = "text") String text, 
+            @Option(name = "locale") String locale,		
 			final PipeOut out) throws FileNotFoundException {
 		final Resource<?> currentResource = shell.getCurrentResource();
 
@@ -169,7 +180,7 @@ public class EnumerationPlugin implements Plugin
 					throw new IllegalStateException(
 							"The current Enum has no constant named '" + constant
 							+ "'");
-				addEnumConstantDescription(enumConstant, locale, value);
+				addEnumConstantDescription(enumConstant, locale, title, text);
 				saveAndFire(javaEnum);
 
 			}else {
@@ -194,7 +205,7 @@ public class EnumerationPlugin implements Plugin
 				JavaEnum javaEnum = (JavaEnum) javaSource ;
 				List<EnumConstant<JavaEnum>> enumConstants = javaEnum.getEnumConstants();
 				for (EnumConstant<JavaEnum> enumConstant : enumConstants) {
-					addEnumConstantDescription(enumConstant, locale, "");
+					addEnumConstantDescription(enumConstant, locale, "", "");
 				}
 				saveAndFire(javaEnum);
 			}else {
@@ -282,20 +293,24 @@ public class EnumerationPlugin implements Plugin
 		}
 		return newFileResource;
 	}   
-
 	/*
 	 * Will update the resource bundle file. We will us a single file for each package.
 	 */
-	private void updateResourceBundleFiles(String packageName, String locale, String key, String value){
-		String bundleName = packageName + ".descriptions.messages"+ (locale!=null?"_"+locale:"")+".properties";
+	private void updateResourceBundleFiles(String klassName, String locale, String key, String title, String text){
+		String bundleName = klassName + ".descriptions.messages"+ (locale!=null?"_"+locale:"")+".properties";
 		PropertiesFileResource propertiesFileResource = getOrCreate(bundleName);
-		propertiesFileResource.putProperty(key, value);
+		String keyFormated = key.replace(DOT_CONSTANT, UNDERSCORE_CONSTANT);
+		String titleKey = keyFormated + DOT_CONSTANT + TITLE_SUFFIX;
+		String textKey = keyFormated + DOT_CONSTANT + TEXT_SUFFIX;
+		propertiesFileResource.putProperty(titleKey, title);
+		propertiesFileResource.putProperty(textKey, text);
 	}
 
-	public void addEnumConstantDescription(EnumConstant<JavaEnum> enumConstant,String locale,String value ){
+
+	public void addEnumConstantDescription(EnumConstant<JavaEnum> enumConstant, String locale, String title, String text){
 
 		String descriptionKey = getDescriptionKey(enumConstant);
-		updateResourceBundleFiles(enumConstant.getOrigin().getPackage(), locale, descriptionKey, value);
+		updateResourceBundleFiles(enumConstant.getOrigin().getQualifiedName(), locale, descriptionKey, title, text);
 		Annotation<JavaEnum> annotation = null;
 		if (!enumConstant.hasAnnotation(Description.class)) {
 			annotation = enumConstant.addAnnotation(Description.class);
