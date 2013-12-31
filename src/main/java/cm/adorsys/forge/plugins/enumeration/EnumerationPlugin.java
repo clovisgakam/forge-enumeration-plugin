@@ -50,7 +50,7 @@ import org.jboss.forge.shell.plugins.SetupCommand;
  */
 @Alias("enum")
 @RequiresProject
-@Help("This plugin will hel you add description on Enum or Enum constant and add @Enumerated on enum field  .")
+@Help("This plugin will help you to add @description annotation on Enum or Enum constant and add @Enumerated on enum field of java class.")
 @RequiresFacet({ EnumerationFacet.class })
 public class EnumerationPlugin implements Plugin
 {
@@ -95,7 +95,7 @@ public class EnumerationPlugin implements Plugin
 	@Command(value = "enumerated-field", help = "add @Enumerated annotation enum Entity field")
 	public void addEnumeratedOnField(
 			final PipeOut out,
-			@Option(name = "fieldname", required = true, completer = PropertyCompleter.class) String fieldname,
+			@Option(name = "onProperty", required = true, completer = PropertyCompleter.class) String fieldname,
 			@Option(required = false, type = PromptType.JAVA_CLASS) JavaResource targets)
 					throws FileNotFoundException {
 		if ((targets == null) && (currentResource instanceof JavaResource)) {
@@ -117,7 +117,7 @@ public class EnumerationPlugin implements Plugin
 	}
 
 
-	@Command(value = "add-enum-class-description", help = "Adds a description annotation to the current resource Enum class")
+	@Command(value = "add-enum-class-description", help = "Adds a @Description annotation to the current Enum class")
 	public void addEnumDescription( 
 			@Option(name = "value") String value, 
 			@Option(name = "locale") String locale,			
