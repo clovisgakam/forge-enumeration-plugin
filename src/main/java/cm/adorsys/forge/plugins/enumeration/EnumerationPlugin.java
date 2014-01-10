@@ -1,5 +1,6 @@
 package cm.adorsys.forge.plugins.enumeration;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.List;
 
@@ -18,7 +19,6 @@ import org.jboss.forge.project.Project;
 import org.jboss.forge.project.facets.JavaSourceFacet;
 import org.jboss.forge.project.facets.ResourceFacet;
 import org.jboss.forge.project.facets.events.InstallFacets;
-import org.jboss.forge.resources.DirectoryResource;
 import org.jboss.forge.resources.PropertiesFileResource;
 import org.jboss.forge.resources.Resource;
 import org.jboss.forge.resources.ResourceFilter;
@@ -27,7 +27,6 @@ import org.jboss.forge.shell.PromptType;
 import org.jboss.forge.shell.Shell;
 import org.jboss.forge.shell.ShellMessages;
 import org.jboss.forge.shell.ShellPrompt;
-import org.jboss.forge.shell.completer.EnumCompleter;
 import org.jboss.forge.shell.completer.PropertyCompleter;
 import org.jboss.forge.shell.events.PickupResource;
 import org.jboss.forge.shell.plugins.Alias;
@@ -140,7 +139,7 @@ public class EnumerationPlugin implements Plugin
 			if(javaSource.isEnum()){
 				JavaEnum javaEnum = (JavaEnum) javaSource ;
 				String key = getDescriptionKey(javaEnum);
-				updateResourceBundleFiles(javaEnum.getOrigin().getQualifiedName(), locale, key, title, text);
+				updateResourceBundleFiles(javaEnum.getOrigin().getPackage(), javaEnum.getOrigin().getName(),locale, key, title, text);
 				Annotation<JavaEnum> annotation = null;
 				if (!javaEnum.hasAnnotation(Description.class)) {
 					annotation = javaEnum.addAnnotation(Description.class);
@@ -239,11 +238,11 @@ public class EnumerationPlugin implements Plugin
 	}
 
 	private String getDescriptionKey(JavaEnum javaType) {
-		return javaType.getQualifiedName() + DOT_CONSTANT + DESCRIPTION_CONSTANT;
+		return javaType.getName() + DOT_CONSTANT + DESCRIPTION_CONSTANT;
 	}
 
 	private String getDescriptionKey(EnumConstant<JavaEnum> member){
-		return member.getOrigin().getQualifiedName() + DOT_CONSTANT + member.getName() + DOT_CONSTANT + DESCRIPTION_CONSTANT;
+		return member.getOrigin().getName() + DOT_CONSTANT + member.getName() + DOT_CONSTANT + DESCRIPTION_CONSTANT;
 	}
 
 	private class BundleBaseNameResourceFilter implements ResourceFilter
@@ -268,37 +267,23 @@ public class EnumerationPlugin implements Plugin
 	 * @param bundleName
 	 * @return
 	 */
-	protected PropertiesFileResource getOrCreate(final String bundleName)
-	{
-		final ResourceFacet resourceFacet = project.getFacet(ResourceFacet.class);
-		final BundleBaseNameResourceFilter filter = new BundleBaseNameResourceFilter(bundleName);
-		PropertiesFileResource newFileResource = null;
-		for (DirectoryResource directoryResource : resourceFacet.getResourceFolders())
-		{
-			for (Resource<?> resource : directoryResource.listResources(filter))
-			{
-				newFileResource = (PropertiesFileResource) resource;
-				// Using the first resource found
-				break;
-			}
-		}
-		if (newFileResource == null)
-		{
-			newFileResource = resourceFacet.getResourceFolder().getChildOfType(PropertiesFileResource.class,
-					bundleName);
-			if (!newFileResource.exists())
-			{
-				newFileResource.createNewFile();
-			}
-		}
-		return newFileResource;
-	}   
+	   protected PropertiesFileResource getOrCreate(final String packageName, final String bundleName)
+	   {
+	      final ResourceFacet resourceFacet = project.getFacet(ResourceFacet.class);
+	      String bundleDirectoryName = packageName.replace(".", File.separator);
+
+	      PropertiesFileResource bundleFile = resourceFacet.getResourceFolder().getChildOfType(PropertiesFileResource.class, bundleDirectoryName + File.separator + bundleName);
+	      if(!bundleFile.exists())bundleFile.createNewFile();
+	      return bundleFile;
+	   }   
+
 	/*
 	 * Will update the resource bundle file. We will us a single file for each package.
 	 */
-	private void updateResourceBundleFiles(String klassName, String locale, String key, String title, String text){
-		String bundleName = klassName + ".descriptions.messages"+ (locale!=null?"_"+locale:"")+".properties";
-		PropertiesFileResource propertiesFileResource = getOrCreate(bundleName);
+	private void updateResourceBundleFiles(String packageName, String klassSimpleName, String locale, String key, String title, String text){
+		String bundleName = klassSimpleName +(locale!=null?"_"+locale:"")+".properties";
+		
+		PropertiesFileResource propertiesFileResource = getOrCreate(packageName, bundleName);
 		String keyFormated = key.replace(DOT_CONSTANT, UNDERSCORE_CONSTANT);
 		String titleKey = keyFormated + DOT_CONSTANT + TITLE_SUFFIX;
 		String textKey = keyFormated + DOT_CONSTANT + TEXT_SUFFIX;
@@ -310,7 +295,7 @@ public class EnumerationPlugin implements Plugin
 	public void addEnumConstantDescription(EnumConstant<JavaEnum> enumConstant, String locale, String title, String text){
 
 		String descriptionKey = getDescriptionKey(enumConstant);
-		updateResourceBundleFiles(enumConstant.getOrigin().getQualifiedName(), locale, descriptionKey, title, text);
+		updateResourceBundleFiles(enumConstant.getOrigin().getPackage(), enumConstant.getOrigin().getName(), locale, descriptionKey, title, text);
 		Annotation<JavaEnum> annotation = null;
 		if (!enumConstant.hasAnnotation(Description.class)) {
 			annotation = enumConstant.addAnnotation(Description.class);
