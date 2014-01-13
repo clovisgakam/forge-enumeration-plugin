@@ -238,11 +238,11 @@ public class EnumerationPlugin implements Plugin
 	}
 
 	private String getDescriptionKey(JavaEnum javaType) {
-		return javaType.getName() + DOT_CONSTANT + DESCRIPTION_CONSTANT;
+		return javaType.getName() + UNDERSCORE_CONSTANT + DESCRIPTION_CONSTANT;
 	}
 
 	private String getDescriptionKey(EnumConstant<JavaEnum> member){
-		return member.getOrigin().getName() + DOT_CONSTANT + member.getName() + DOT_CONSTANT + DESCRIPTION_CONSTANT;
+		return member.getOrigin().getName() + UNDERSCORE_CONSTANT + member.getName() + UNDERSCORE_CONSTANT + DESCRIPTION_CONSTANT;
 	}
 
 	private class BundleBaseNameResourceFilter implements ResourceFilter
